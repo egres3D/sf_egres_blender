@@ -1,0 +1,15 @@
+schema_version = "1.0.0"
+
+id = "starfield_egres_tool"
+version = "1.5.0"
+name = "EGRES - Edit Geometry Resources (Starfield)"
+tagline = "Starfield geo manipulator"
+maintainer = "Deveris256"
+type = "add-on"
+blender_version_min = "4.3.0"
+license = [
+  "SPDX:MIT"
+]
+
+[permissions]
+files = "Import/Export Starfield game files"
