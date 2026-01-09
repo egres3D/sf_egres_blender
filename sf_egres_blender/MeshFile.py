@@ -13,7 +13,7 @@ def CreateUv(mesh, vertex_indices, uv_data_array, n):
         uv_layer.data.foreach_set("uv", uv_data_array[vertex_indices].ravel())
 
 class StarfieldMeshFile:
-    def __init__(self, mesh_path, name="UNKNOWN", read_flags=MeshReadWriteFlags(1, 1, 1, 1, 1, 0, 1, 0, 0)):
+    def __init__(self, name="UNKNOWN", read_flags=MeshReadWriteFlags(1, 1, 1, 1, 1, 0, 1, 0, 0)):
         self.name = name
         self.verts = None
         self.tris = None

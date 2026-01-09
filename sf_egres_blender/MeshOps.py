@@ -23,7 +23,7 @@ class SF_EGRES_ImportMesh(bpy.types.Operator):
         start = time.time()
         for f in self.files:
             path = os.path.join(self.directory, f.name)
-            mesh = StarfieldMeshFile(path, name=f.name[:-5])
+            mesh = StarfieldMeshFile(name=f.name[:-5])
             mesh.LoadMesh(path)
             mesh.CreateBlenderMesh()
             del mesh
