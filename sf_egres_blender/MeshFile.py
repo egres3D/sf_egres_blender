@@ -1,10 +1,12 @@
-import time
 import ctypes
-import numpy as np
-import bpy
-import bmesh
 
-from api_egres import DllReadMeshBin, MeshReadWriteFlags, PtrToNp, PtrListToPtrArray
+import bmesh
+import bpy
+import numpy as np
+
+from api_egres import MeshReadWriteFlags, PtrToNp, RawBuffer, DllReadMeshBin, ArchiveReadMesh, \
+    DllFreeMesh
+
 
 def CreateUv(mesh, vertex_indices, uv_data_array, n):
     if isinstance(uv_data_array, np.ndarray):
@@ -25,60 +27,52 @@ class StarfieldMeshFile:
         self.weights = None
         self.flags = read_flags
 
-    def LoadMesh(self, mesh_path):
-        total = 9
-        verts = np.zeros(1, dtype=np.float32)
-        tris = np.zeros(1, dtype=np.float32)
-        uv1 = np.zeros(1, dtype=np.float32)
-        uv2 = np.zeros(1, dtype=np.float32)
-        colors = np.zeros(1, dtype=np.uint8)
-        normals = np.zeros(1, dtype=np.float32)
-        tangents = np.zeros(1, dtype=np.float32)
-        weights = np.zeros(1, dtype=np.float32)
+    def Buffers_Load(self):
+        TOTAL = 8
+        buffers = (RawBuffer * TOTAL)()
+        return buffers
 
-        sizes = np.zeros(total, dtype=np.int64).ctypes.data_as(ctypes.POINTER(ctypes.c_size_t))
+    def Buffers_Collect(self, buffers):
+        if buffers[0].len > 0:
+            self.tris = PtrToNp(buffers[0].ptr, ctypes.c_uint16, np.uint16, buffers[0].len).reshape(-1, 3)
 
-        ptrs = [
-            tris.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-            verts.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-            uv1.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-            uv2.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-            colors.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-            normals.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-            tangents.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-            weights.ctypes.data_as(ctypes.POINTER(ctypes.c_void_p)),
-        ]
-        ptrs = PtrListToPtrArray(ptrs)
+        if buffers[1].len != 0:
+            self.verts = PtrToNp(buffers[1].ptr, ctypes.c_float, np.float32, buffers[1].len).reshape(-1, 3)
 
-        DllReadMeshBin(mesh_path.encode('utf-8'), ctypes.byref(self.flags), ptrs, sizes)
+        if buffers[2].len != 0:
+            self.uv1 = PtrToNp(buffers[2].ptr, ctypes.c_float, np.float32, buffers[2].len).reshape(-1, 2)
 
-        size_buf = PtrToNp(sizes, ctypes.c_size_t, np.int64, total)
+        if buffers[3].len != 0:
+            self.uv2 = PtrToNp(buffers[3].ptr, ctypes.c_float, np.float32, buffers[3].len).reshape(-1, 2)
 
-        if size_buf[0] != 0:
-            self.tris = PtrToNp(ptrs[0], ctypes.c_uint16, np.uint16, size_buf[0]).reshape(-1, 3)
+        if buffers[4].len != 0:
+            self.colors = PtrToNp(buffers[4].ptr, ctypes.c_uint8, np.uint8, buffers[4].len).reshape(-1, 4)
 
-        if size_buf[1] != 0:
-            self.verts = PtrToNp(ptrs[1], ctypes.c_float, np.float32, size_buf[1]).reshape(-1, 3)
-
-        if size_buf[2] != 0:
-            self.uv1 = PtrToNp(ptrs[2], ctypes.c_float, np.float32, size_buf[2]).reshape(-1, 2)
-
-        if size_buf[3] != 0:
-            self.uv2 = PtrToNp(ptrs[3], ctypes.c_float, np.float32, size_buf[3]).reshape(-1, 2)
-
-        if size_buf[4] != 0:
-            self.colors = PtrToNp(ptrs[4], ctypes.c_uint8, np.uint8, size_buf[4]).reshape(-1, 4)
-
-        if size_buf[5] != 0:
-            normals_buf = PtrToNp(ptrs[5], ctypes.c_float, np.float32, size_buf[5]).reshape(-1, 3)
+        if buffers[5].len != 0:
+            normals_buf = PtrToNp(buffers[5].ptr, ctypes.c_float, np.float32, buffers[5].len).reshape(-1, 3)
             self.normals = normals_buf / np.linalg.norm(normals_buf, axis=1)[:, np.newaxis]
 
-        if size_buf[6] != 0:
-            self.tangents = PtrToNp(ptrs[6], ctypes.c_float, np.float32, size_buf[6]).reshape(-1, 3)
+        if buffers[6].len != 0:
+            self.tangents = PtrToNp(buffers[6].ptr, ctypes.c_float, np.float32, buffers[6].len).reshape(-1, 3)
 
-        if size_buf[8] != 0:
-            self.weights = PtrToNp(ptrs[7], ctypes.c_float, np.float32, size_buf[8] * int(size_buf[1] / 3)).reshape(
-                size_buf[8], -1)
+        if buffers[7].len != 0:
+            self.weights = PtrToNp(buffers[7].ptr, ctypes.c_float, np.float32,
+                                   buffers[7].len * (int(buffers[1].len / 3))).reshape(buffers[7].len, int(buffers[1].len / 3))
+
+        DllFreeMesh(buffers)
+
+    def LoadMesh_Archive(self, archive_path, mesh_path):
+        buffers = self.Buffers_Load()
+        ArchiveReadMesh(
+            archive_path.encode('utf-8'),
+            mesh_path.encode('utf-8'),
+            buffers)
+        self.Buffers_Collect(buffers)
+
+    def LoadMesh_Bin(self, mesh_path):
+        buffers = self.Buffers_Load()
+        DllReadMeshBin(mesh_path.encode('utf-8'), buffers)
+        self.Buffers_Collect(buffers)
 
     def CreateBlenderMesh(self):
         """Expects object mode."""

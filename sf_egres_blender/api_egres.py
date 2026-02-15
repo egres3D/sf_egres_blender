@@ -1,19 +1,53 @@
 import ctypes
-import numpy as np
 import os
-import time
+
+import numpy as np
+
+
+class RawBuffer(ctypes.Structure):
+    _fields_ = [
+        ("ptr", ctypes.c_void_p),
+        ("len", ctypes.c_size_t),
+    ]
 
 scr_path = os.path.dirname(__file__)
-dll = ctypes.CDLL(os.path.join(scr_path, "sf_EGRES.dll"))
+dll = ctypes.CDLL(os.path.join(scr_path, "lib_egres.dll"))
 
-DllReadMeshBin = dll.ReadMeshFile
+DllReadMeshBin = dll.LoadMesh
 DllReadMeshBin.argtypes = [
     ctypes.c_char_p,
-    ctypes.c_void_p,
-    ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)),
-    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.c_void_p
 ]
 DllReadMeshBin.restype = ctypes.c_void_p
+
+DllFreeMesh = dll.FreeMeshFile
+DllFreeMesh.argtypes = [
+    ctypes.c_void_p
+]
+DllFreeMesh.restype = ctypes.c_void_p
+
+ArchiveIterFree = dll.arch_iter_free
+ArchiveIterFree.argtypes = [
+        ctypes.c_void_p
+    ]
+ArchiveIterFree.restype = ctypes.c_void_p
+
+ArchiveIterNext = dll.arch_iter_next
+ArchiveIterNext.argtypes = [
+    ctypes.c_void_p
+]
+ArchiveIterNext.restype = ctypes.c_char_p
+
+ArchiveIterNew = dll.arch_iter_new
+ArchiveIterNew.restype = ctypes.c_void_p
+
+ArchiveReadMesh = dll.LoadMeshFromArchive
+ArchiveReadMesh.argtypes = [
+    ctypes.c_char_p,
+    ctypes.c_char_p,
+    ctypes.c_void_p
+]
+ArchiveReadMesh.restype = ctypes.c_void_p
 
 class MeshReadWriteFlags(ctypes.Structure):
     _fields_ = [
@@ -38,6 +72,3 @@ def PtrToNp(ptr, c_data_type, np_data_type, size):
     buf = ctypes.cast(ptr, ctypes.POINTER(c_data_type * size))
     array = np.ctypeslib.as_array(buf.contents).astype(np_data_type)
     return array
-
-if __name__ == "__main__":
-    pass

@@ -5,7 +5,8 @@
 
 ### Current features:
 
-- Import Mesh
+- Import Mesh from disk
+- Import mesh from .ba2 archive
 
 
 ### Plans
