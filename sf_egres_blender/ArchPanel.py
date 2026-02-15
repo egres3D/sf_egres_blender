@@ -100,12 +100,9 @@ class EGRES_ArchivePanel(bpy.types.Panel):
         global archive
         layout = self.layout
 
-        if archive == None:
-            layout.operator("scene.egres_sf_archive_picker")
-            return
+        layout.operator("scene.egres_sf_archive_picker")
 
-        layout.operator("scene.egres_sf_archive_load_paths")
-
+        if archive == None: return
         box = layout.box()
         box.template_list(
             "EGRESARCHIVE_UL_List",
