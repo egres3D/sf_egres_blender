@@ -39,6 +39,10 @@ ArchiveIterNext.argtypes = [
 ArchiveIterNext.restype = ctypes.c_char_p
 
 ArchiveIterNew = dll.arch_iter_new
+ArchiveIterNew.argtypes = [
+    ctypes.c_char_p,
+    ctypes.c_char_p,
+]
 ArchiveIterNew.restype = ctypes.c_void_p
 
 ArchiveReadMesh = dll.LoadMeshFromArchive

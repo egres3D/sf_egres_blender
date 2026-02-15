@@ -20,7 +20,7 @@ class BArchive:
         self.archive_items = []
 
     def loadPaths(self):
-        it = api_egres.ArchiveIterNew(self.path.encode('utf-8'))
+        it = api_egres.ArchiveIterNew(self.path.encode('utf-8'), ".mesh".encode('utf-8'))
         result = []
 
         while True:

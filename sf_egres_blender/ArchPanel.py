@@ -4,9 +4,11 @@ import bpy
 from ArchFile import BArchive
 from MeshFile import StarfieldMeshFile
 
-archive = BArchive("C:\\SteamLibrary\\steamapps\\common\\Starfield\\Data\\Starfield - Meshes01.ba2")
+archive = None
 
 def updateArchiveList():
+    if archive == None: return
+
     bpy.context.window_manager.egres_archive.archive_items.clear()
     bpy.context.window_manager.egres_archive.path = archive.path
 
@@ -16,6 +18,33 @@ def updateArchiveList():
         item.display_name = a.filename
         item.extension = a.extension
         item.path = a.full_path
+
+class EGRES_Archive_PickArchive(bpy.types.Operator):
+    bl_idname = "scene.egres_sf_archive_picker"
+    bl_label = "Select archive"
+
+    filter_glob: bpy.props.StringProperty(
+        default="*.ba2",
+        options={'HIDDEN'}
+    )
+
+    filepath: bpy.props.StringProperty(subtype='FILE_PATH')
+
+    def execute(self, context):
+        global archive
+        path = self.filepath
+
+        if path.startswith("//"):
+            path = bpy.path.abspath(path)
+
+        archive = BArchive(path)
+        archive.loadPaths()
+        updateArchiveList()
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
 
 class EGRES_Archive_ImportMesh(bpy.types.Operator):
     bl_idname = "scene.egres_sf_import_mesh_from_archive"
@@ -71,6 +100,10 @@ class EGRES_ArchivePanel(bpy.types.Panel):
         global archive
         layout = self.layout
 
+        if archive == None:
+            layout.operator("scene.egres_sf_archive_picker")
+            return
+
         layout.operator("scene.egres_sf_archive_load_paths")
 
         box = layout.box()
@@ -89,6 +122,7 @@ class EGRES_ArchivePanel(bpy.types.Panel):
 panels = [
 ArchiveListItem,
 ArchiveListCollection,
+EGRES_Archive_PickArchive,
 EGRES_Archive_ImportMesh,
 EGRESARCHIVE_UL_List,
 EGRES_Archive_LoadPaths,
@@ -101,8 +135,6 @@ def register():
     for c in panels:
         bpy.utils.register_class(c)
 
-    #archive.loadPaths()
-
     w = bpy.types.WindowManager
 
     w.egres_archive = bpy.props.PointerProperty(type=ArchiveListCollection)
@@ -110,3 +142,7 @@ def register():
 def unregister():
     for c in panels:
         bpy.utils.unregister_class(c)
+
+    w = bpy.types.WindowManager
+
+    del w.egres_archive
